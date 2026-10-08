@@ -23,7 +23,7 @@ case "${1:-}" in
     git fetch -q origin "$BRANCH"
     git archive "origin/$BRANCH" | tar -x
     exclude
-    (cd e2e && bun install >/dev/null)
+    (cd e2e && bun install >/dev/null && bash fixtures/make-video.sh >/dev/null)
     echo "devtools restored; git status should be clean:"
     git status --short
     ;;
@@ -36,7 +36,7 @@ case "${1:-}" in
       rm -rf "${tmp:?}/$p"
       cp -a "$p" "$tmp/"
     done
-    rm -rf "$tmp/e2e/node_modules" "$tmp/e2e/test-results" "$tmp/e2e/playwright-report"
+    rm -rf "$tmp/e2e/node_modules" "$tmp/e2e/test-results" "$tmp/e2e/playwright-report" "$tmp/e2e/fixtures/video"
     # .git/info/exclude is shared by all worktrees, so force-add
     git -C "$tmp" add -A -f "${PATHS[@]}"
     if git -C "$tmp" diff --cached --quiet; then
