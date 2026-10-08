@@ -156,3 +156,26 @@ test('a deep link to a section plays only that section', async ({ page }) => {
   expect(Math.min(...seen)).toBeGreaterThan(119);
   expect(Math.max(...seen)).toBeLessThan(127.5);
 });
+
+test('playback keeps going while the map is shown', async ({ page }) => {
+  await openDrive(page);
+  await waitForPlayback(page);
+  await page.getByText('Map', { exact: true }).click();
+  const before = await displayedSeconds(page);
+  await page.waitForTimeout(2500);
+  expect((await displayedSeconds(page)) - before).toBeGreaterThanOrEqual(2);
+
+  await page.getByText('Video', { exact: true }).click();
+  await expect(page.locator('video')).toBeVisible();
+});
+
+test('space toggles play and pause', async ({ page }) => {
+  await openDrive(page);
+  await waitForPlayback(page);
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+
+  await page.keyboard.press('Space');
+  await expect.poll(async () => (await videoState(page)).paused).toBe(true);
+  await page.keyboard.press('Space');
+  await expect.poll(async () => (await videoState(page)).paused).toBe(false);
+});
