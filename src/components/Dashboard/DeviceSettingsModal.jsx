@@ -225,8 +225,8 @@ class DeviceSettingsModal extends Component {
   }
 
   onPrimeSettings() {
+    // leaving the page closes the settings too
     this.props.dispatch(navigate({ dongleId: this.props.dongleId, page: 'prime' }));
-    this.props.onClose();
   }
 
   async unpairDevice() {
@@ -433,7 +433,7 @@ class DeviceSettingsModal extends Component {
 }
 
 const stateToProps = (state, ownProps) => {
-  const device = state.devices.find((d) => d.dongle_id === ownProps.dongleId)
+  const device = state.devices?.find((d) => d.dongle_id === ownProps.dongleId)
     || ((state.device && state.device.dongle_id === ownProps.dongleId) ? state.device : null);
   return {
     subscription: state.subscription,

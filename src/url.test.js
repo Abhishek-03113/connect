@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseUrl, urlFor } from './url';
+import { parseUrl, settingsUrl, urlFor } from './url';
 
 const DONGLE = '0000aaaa0000aaaa';
 const LOG = '2026-08-06--12-00-00';
 
-const home = { page: 'home', dongleId: null, logId: null, zoom: null, legacyRange: null };
+const home = { page: 'home', dongleId: null, logId: null, zoom: null, legacyRange: null, settings: null };
 const device = { ...home, dongleId: DONGLE };
 
 describe('parseUrl', () => {
@@ -55,6 +55,27 @@ describe('parseUrl', () => {
     ['uppercase', DONGLE.toUpperCase()],
   ])('ignores a %s dongle id', (_name, dongleId) => {
     expect(parseUrl({ pathname: `/${dongleId}/${LOG}` })).toEqual(home);
+  });
+
+  it.each([
+    [`?settings=${DONGLE}`, DONGLE],
+    [`?r=x&settings=${DONGLE}`, DONGLE],
+    ['?settings=nope', null],
+    ['?settings', null],
+    ['', null],
+  ])('reads settings from %j', (search, expected) => {
+    expect(parseUrl({ pathname: `/${DONGLE}/${LOG}`, search }).settings).toBe(expected);
+  });
+});
+
+describe('settingsUrl', () => {
+  it.each([
+    ['opens over a drive', { pathname: `/${DONGLE}/${LOG}`, search: '' }, DONGLE, `/${DONGLE}/${LOG}?settings=${DONGLE}`],
+    ['keeps other params', { pathname: '/referrals', search: '?r=x' }, DONGLE, `/referrals?r=x&settings=${DONGLE}`],
+    ['closes', { pathname: `/${DONGLE}`, search: `?settings=${DONGLE}` }, null, `/${DONGLE}`],
+    ['closes and keeps other params', { pathname: `/${DONGLE}`, search: `?settings=${DONGLE}&r=x` }, null, `/${DONGLE}?r=x`],
+  ])('%s', (_name, location, dongleId, expected) => {
+    expect(settingsUrl(location, dongleId)).toBe(expected);
   });
 });
 

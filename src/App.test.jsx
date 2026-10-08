@@ -317,4 +317,28 @@ describe('whole-app behavior', () => {
     act(() => history.goBack());
     await waitFor(() => expect(history.location.pathname).toBe(`/${FIRST}`));
   });
+  test('device settings open from the URL and close back to the page', async () => {
+    const { history } = await renderApp(`/${FIRST}?settings=${FIRST}`);
+    expect(await screen.findByText('Device settings')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByText('Device settings')).not.toBeInTheDocument());
+    expect(history.location.pathname).toBe(`/${FIRST}`);
+    expect(history.location.search).toBe('');
+  });
+
+  test('device settings open over a drive and keep it', async () => {
+    const { history } = await renderApp(`/${FIRST}/${RECENT_LOG}`);
+    expect(await screen.findByRole('slider', { name: 'Drive timeline' })).toBeVisible();
+    act(() => history.push(`/${FIRST}/${RECENT_LOG}?settings=${FIRST}`));
+    expect(await screen.findByText('Device settings')).toBeVisible();
+    act(() => history.goBack());
+    await waitFor(() => expect(screen.queryByText('Device settings')).not.toBeInTheDocument());
+    expect(screen.getByRole('slider', { name: 'Drive timeline' })).toBeVisible();
+  });
+
+  test('device settings stay closed for a device the user does not own', async () => {
+    await renderApp(`/${SHARED}?settings=${SHARED}`);
+    expect(await screen.findByText('Mock recent route start')).toBeVisible();
+    expect(screen.queryByText('Device settings')).not.toBeInTheDocument();
+  });
 });

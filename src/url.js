@@ -1,5 +1,5 @@
-// Every URL connect understands. parseUrl() is the only code that reads one
-// and urlFor() the only code that writes one.
+// Every URL connect understands. parseUrl() is the only code that reads one,
+// urlFor() and settingsUrl() the only code that writes one.
 //
 //   /                               home, replaced by the selected device
 //   /referrals                      referrals
@@ -9,6 +9,8 @@
 //   /:dongleId/:logId               drive
 //   /:dongleId/:logId/:start/:end   part of a drive, in seconds from its start
 //   /:dongleId/:start/:end          legacy time range in unix ms, replaced by its drive
+//
+//   ?settings=:dongleId             device settings, open over any page
 
 const DONGLE_ID = /^[a-f0-9]{16}$/;
 const LOG_ID = /^[a-f0-9-]{20}$/;
@@ -31,12 +33,17 @@ function parseRange(start, end, scale) {
  * @property {string|null} logId the open drive
  * @property {{ start: number, end: number }|null} zoom part of the drive, in ms from its start
  * @property {{ start: number, end: number }|null} legacyRange in unix ms
+ * @property {string|null} settings the device whose settings are open
  */
 
 /** @returns {Location} */
-export function parseUrl({ pathname }) {
+export function parseUrl({ pathname, search = '' }) {
   const [first, ...rest] = pathname.split('/').filter(Boolean);
-  const home = { page: 'home', dongleId: null, logId: null, zoom: null, legacyRange: null };
+  const settings = new URLSearchParams(search).get('settings');
+  const home = {
+    page: 'home', dongleId: null, logId: null, zoom: null, legacyRange: null,
+    settings: DONGLE_ID.test(settings) ? settings : null,
+  };
 
   if (first === 'referrals' && rest.length === 0) {
     return { ...home, page: 'referrals' };
@@ -79,4 +86,16 @@ export function urlFor({ page, dongleId, logId, zoom }) {
   }
   // round outwards, so a short selection keeps a non-empty range
   return `/${dongleId}/${logId}/${Math.floor(zoom.start / 1000)}/${Math.ceil(zoom.end / 1000)}`;
+}
+
+// the current page with device settings open for dongleId, or closed for null
+export function settingsUrl({ pathname, search }, dongleId) {
+  const params = new URLSearchParams(search);
+  if (dongleId) {
+    params.set('settings', dongleId);
+  } else {
+    params.delete('settings');
+  }
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
 }

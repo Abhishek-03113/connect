@@ -6,7 +6,7 @@ import { api } from '../api/backend';
 import * as Types from './types';
 import { resetPlayback, selectLoop } from '../timeline/playback';
 import {hasRoutesData } from '../timeline/segments';
-import { urlFor } from '../url';
+import { settingsUrl, urlFor } from '../url';
 import { getDeviceFromState, deviceVersionAtLeast, deviceIsOnline } from '../utils';
 import { webrtcConnectionManager } from '../utils/webrtc';
 import { hardNavigate } from '../utils/navigation';
@@ -159,6 +159,13 @@ export function navigate(location) {
     if (url !== `${pathname}${search}`) {
       dispatch(push(url));
     }
+  };
+}
+
+// Opens device settings over the current page, or closes them for null.
+export function showSettings(dongleId) {
+  return (dispatch, getState) => {
+    dispatch(push(settingsUrl(getState().router.location, dongleId)));
   };
 }
 

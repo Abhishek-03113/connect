@@ -13,8 +13,9 @@ import Dashboard from './Dashboard';
 import IosPwaPopup from './IosPwaPopup';
 import AppDrawer from './AppDrawer';
 import BodyTeleop from './BodyTeleop';
+import DeviceSettingsModal from './Dashboard/DeviceSettingsModal';
 
-import { analyticsEvent, navigate, updateDevices } from '../actions';
+import { analyticsEvent, navigate, showSettings, updateDevices } from '../actions';
 import init from '../actions/startup';
 import Colors from '../colors';
 import { play, pause } from '../timeline/playback';
@@ -82,6 +83,7 @@ class ExplorerApp extends Component {
     this.handleDrawerStateChanged = this.handleDrawerStateChanged.bind(this);
     this.updateHeaderRef = this.updateHeaderRef.bind(this);
     this.closePair = this.closePair.bind(this);
+    this.closeSettings = this.closeSettings.bind(this);
     this.closeBodyTeleop = this.closeBodyTeleop.bind(this);
   }
 
@@ -169,6 +171,10 @@ class ExplorerApp extends Component {
     }
   }
 
+  closeSettings() {
+    this.props.dispatch(showSettings(null));
+  }
+
   async closePair() {
     const { pairDongleId } = this.state;
     await localforage.removeItem('pairToken');
@@ -192,11 +198,14 @@ class ExplorerApp extends Component {
 
   render() {
     const {
-      classes, currentRoute, devices, dispatch, dongleId, page, profile,
+      classes, currentRoute, device, devices, dispatch, dongleId, page, settings, profile,
     } = this.props;
     const { drawerIsOpen, pairLoading, pairError, pairDongleId, windowWidth } = this.state;
 
     const noDevicesUpsell = (devices?.length === 0 && !dongleId);
+    // settings open over any page, for a device the user can manage
+    const settingsDevice = devices?.find((d) => d.dongle_id === settings) || (device?.dongle_id === settings ? device : null);
+    const settingsOpen = Boolean(settingsDevice?.is_owner || (settingsDevice && profile?.superuser));
     const isLarge = noDevicesUpsell || windowWidth > 1080;
 
     const sidebarWidth = noDevicesUpsell ? 0 : Math.max(280, windowWidth * 0.2);
@@ -242,6 +251,11 @@ class ExplorerApp extends Component {
                 ? <NoDeviceUpsell />
                 : (page === 'drive' ? <DriveView /> : <Dashboard />)}
             </div>
+            <DeviceSettingsModal
+              isOpen={ settingsOpen }
+              dongleId={ settingsOpen ? settings : null }
+              onClose={ this.closeSettings }
+            />
             <IosPwaPopup />
             <Modal open={ Boolean(pairLoading || pairError || pairDongleId) } onClose={ this.closePair }>
               <Paper className={classes.modal}>
@@ -268,14 +282,19 @@ class ExplorerApp extends Component {
   }
 }
 
-const stateToProps = (state) => ({
-  zoom: state.zoom,
-  pathname: state.router.location.pathname,
-  page: parseUrl(state.router.location).page,
-  dongleId: state.dongleId,
-  devices: state.devices,
-  currentRoute: state.currentRoute,
-  profile: state.profile,
-});
+const stateToProps = (state) => {
+  const { page, settings } = parseUrl(state.router.location);
+  return {
+    zoom: state.zoom,
+    pathname: state.router.location.pathname,
+    page,
+    settings,
+    dongleId: state.dongleId,
+    device: state.device,
+    devices: state.devices,
+    currentRoute: state.currentRoute,
+    profile: state.profile,
+  };
+};
 
 export default connect(stateToProps)(withStyles(styles)(ExplorerApp));
