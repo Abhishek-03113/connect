@@ -23,6 +23,41 @@ real network or long sleeps. Use `bun start` (port 3000) and `/demo` to try UI
 changes without a device. `bun run build:production` if you touched build
 config, env vars, or imports that could break bundling.
 
+## Testing a change end to end
+
+Pick the layers the change touches; lint + unit tests are always required.
+
+1. **Unit tests** — `bun run test` (or `bun run test:watch` while iterating,
+   `bunx vitest run src/path/file.test.js` for one file, `bun run test-coverage`).
+2. **Demo mode in the dev server** — `bun start`, open `http://localhost:3000/demo`.
+   Uses the fake backend in `src/api/demo.js` (device `deadbeefdeadbeef`, sample
+   drives with real thumbnails/events), so no account or device is needed.
+   Covers dashboard, drive list, drive view/timeline, filters, modals. In headless
+   Chromium the replay video shows "Unable to load video" (no HLS codec) — that's
+   the environment, not a bug.
+3. **Drive the UI headlessly** — Playwright is preinstalled globally; import it by
+   absolute path (`$(npm root -g)/playwright/index.mjs`) from a scratch script,
+   load `/demo`, click through, screenshot. Check for `pageerror` events.
+4. **Production build** — `bun run build:production` (chunk-size warnings are normal).
+5. **Visual regression gallery** — screenshots 15 states × desktop/mobile using
+   fixtures for a public route and diffs them. Installs puppeteer with `--no-save`
+   (package.json untouched). Locally, compare against a local build of the base,
+   not `--baseline-url` (different Chrome/fonts flag every screen as changed):
+   ```sh
+   git worktree add /tmp/base origin/master && ln -s "$PWD/node_modules" /tmp/base/node_modules
+   PUPPETEER_EXECUTABLE_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome \
+     bun run build:gallery -- --output /tmp/gallery --base /tmp/base --base-sha "$(git -C /tmp/base rev-parse HEAD)"
+   git worktree remove --force /tmp/base
+   ```
+   Open `/tmp/gallery/connect-gallery.html`; an unchanged UI reports `0 changed`.
+   If the change adds a new screen or modal, add it to `GALLERY_STATES` in
+   `scripts/build-gallery.mjs`.
+6. **PR preview** — on a PR to upstream, CI deploys `https://<pr>.connect-d5y.pages.dev`
+   plus a gallery diffed against `latest`. Only there (or on a real login) can
+   features needing a real device be checked: live stream/teleop, uploads, Athena RPCs,
+   prime checkout. In a fork without the Cloudflare secrets the preview job
+   fails; the lint/test and build jobs still run.
+
 ## Formatting (`.editorconfig` + existing code)
 
 - 2-space indent, LF, UTF-8, final newline, no trailing whitespace.
