@@ -160,6 +160,10 @@ Recent upstream work removes Material-UI piece by piece (`@material-ui/icons`,
   listed in `.git/info/exclude`. Don't stage them, don't add them to `.gitignore`,
   and never add their dependencies to the root `package.json`/`bun.lock`. Before
   every commit, check `git status` shows only the change itself.
+- That tooling is versioned on the orphan branch **`devtools`** (no shared history
+  with `master`; never merge it, never open a PR from it). Restore in a new clone
+  or session: `git fetch origin devtools && git archive origin/devtools | tar -x && bash .claude/devtools.sh restore`.
+  After editing any of it: `bash .claude/devtools.sh save "what changed"`.
 
 - Commit/PR titles: short, lowercase, imperative-ish, optional `area:` prefix —
   `fix device name propagation`, `driveview: right align route buttons`,
