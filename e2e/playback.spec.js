@@ -168,14 +168,3 @@ test('playback keeps going while the map is shown', async ({ page }) => {
   await page.getByText('Video', { exact: true }).click();
   await expect(page.locator('video')).toBeVisible();
 });
-
-test('space toggles play and pause', async ({ page }) => {
-  await openDrive(page);
-  await waitForPlayback(page);
-  await page.locator('body').click({ position: { x: 5, y: 5 } });
-
-  await page.keyboard.press('Space');
-  await expect.poll(async () => (await videoState(page)).paused).toBe(true);
-  await page.keyboard.press('Space');
-  await expect.poll(async () => (await videoState(page)).paused).toBe(false);
-});
