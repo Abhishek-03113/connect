@@ -1,6 +1,6 @@
 import { LOCATION_CHANGE, replace } from 'connected-react-router';
 import { parseUrl, urlFor } from '../url';
-import { checkRoutesData, checkLastRoutesData, primeNav, streamNav, selectDevice, selectDrive } from './index';
+import { checkRoutesData, checkLastRoutesData, selectDevice, selectDrive } from './index';
 import { api } from '../api/backend';
 
 // Legacy links name a time range instead of a drive. Look the drive up and
@@ -45,13 +45,6 @@ export function applyUrl(location) {
 
     if (legacyRange) {
       dispatch(replaceLegacyUrl(location.pathname, dongleId, legacyRange));
-    }
-
-    if ((page === 'prime') !== state.primeNav) {
-      dispatch(primeNav(page === 'prime', false));
-    }
-    if ((page === 'stream') !== state.streamNav) {
-      dispatch(streamNav(page === 'stream', false));
     }
   };
 }

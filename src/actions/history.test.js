@@ -17,7 +17,6 @@ vi.mock('../api', () => ({
 }));
 vi.mock('./index', () => ({
   selectDevice: vi.fn(), selectDrive: vi.fn(), checkRoutesData: vi.fn(), checkLastRoutesData: vi.fn(),
-  primeNav: vi.fn(), streamNav: vi.fn(),
 }));
 
 const DONGLE = '0000aaaa0000aaaa';
@@ -27,7 +26,7 @@ const LEGACY = `/${DONGLE}/1000/2000`;
 
 function create(state = {}, pathname = `/${DONGLE}`) {
   const getState = vi.fn(() => ({
-    dongleId: DONGLE, primeNav: false, streamNav: false, router: { location: { pathname } }, ...state,
+    dongleId: DONGLE, router: { location: { pathname } }, ...state,
   }));
   const dispatch = vi.fn((action) => (typeof action === 'function' ? action(dispatch, getState) : action));
   const next = vi.fn(() => 'next result');
@@ -98,18 +97,6 @@ describe('history middleware', () => {
     const { dispatch, visit } = create({ dongleId: null });
     visit('/');
     expect(dispatch).toHaveBeenCalledOnce();
-  });
-
-  it.each([
-    ['prime', 'primeNav'],
-    ['stream', 'streamNav'],
-  ])('opens and closes %s', (page, actionName) => {
-    create().visit(`/${DONGLE}/${page}`);
-    expect(actions[actionName]).toHaveBeenCalledWith(true, false);
-
-    vi.clearAllMocks();
-    create({ [actionName]: true }).visit(`/${DONGLE}`);
-    expect(actions[actionName]).toHaveBeenCalledWith(false, false);
   });
 });
 
