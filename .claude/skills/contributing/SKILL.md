@@ -35,9 +35,13 @@ Pick the layers the change touches; lint + unit tests are always required.
    Covers dashboard, drive list, drive view/timeline, filters, modals. In headless
    Chromium the replay video shows "Unable to load video" (no HLS codec) — that's
    the environment, not a bug.
-3. **Drive the UI headlessly** — Playwright is preinstalled globally; import it by
-   absolute path (`$(npm root -g)/playwright/index.mjs`) from a scratch script,
-   load `/demo`, click through, screenshot. Check for `pageerror` events.
+3. **E2E tests in demo mode** — `bun run test:e2e` (Playwright, `e2e/*.spec.js`,
+   desktop + mobile projects). Starts the dev server itself (or reuses one on :3000)
+   and fails on any uncaught page error. Add a spec when a change affects a user
+   flow demo mode can reach. `@playwright/test` is pinned to 1.56.1 to match the
+   Chromium preinstalled in cloud sessions; elsewhere run
+   `bunx playwright install chromium` once. Debug with `bunx playwright test --ui`
+   or the trace saved in `test-results/` on failure.
 4. **Production build** — `bun run build:production` (chunk-size warnings are normal).
 5. **Visual regression gallery** — screenshots 15 states × desktop/mobile using
    fixtures for a public route and diffs them. Installs puppeteer with `--no-save`
