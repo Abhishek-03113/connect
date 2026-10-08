@@ -4,25 +4,17 @@ import * as Sentry from '@sentry/react';
 import MyCommaAuth from '@commaai/my-comma-auth';
 
 import * as Types from './actions/types';
-import { getDongleID, getZoom } from './url';
+import { parseUrl, urlFor } from './url';
 import { deviceIsOnline } from './utils';
 
-function getPageViewEventLocation(pathname) {
-  let pageLocation = pathname;
-  const dongleId = getDongleID(pageLocation);
-  if (dongleId) {
-    pageLocation = pageLocation.replace(dongleId, '<dongleId>');
+// placeholders for the device and time range, so page views group by page
+export function getPageViewEventLocation(location) {
+  const url = parseUrl(location);
+  if (!url.dongleId) {
+    return location.pathname.replace(/\/$/, '');
   }
-  const zoom = getZoom(pageLocation);
-  if (zoom) {
-    pageLocation = pageLocation.replace(zoom.start.toString(), '<zoomStart>');
-    pageLocation = pageLocation.replace(zoom.end.toString(), '<zoomEnd>');
-  }
-
-  if (pageLocation.endsWith('/')) {
-    pageLocation = pageLocation.substring(0, pageLocation.length - 1);
-  }
-  return pageLocation;
+  const range = url.zoom || url.legacyRange ? '/<zoomStart>/<zoomEnd>' : '';
+  return `${urlFor({ ...url, dongleId: '<dongleId>', zoom: null })}${range}`;
 }
 
 const clusterMap = {
@@ -102,7 +94,7 @@ function logAction(action, prevState, state) {
   switch (action.type) {
     case LOCATION_CHANGE:
       gtag('event', 'page_view', {
-        page_location: getPageViewEventLocation(action.payload.location.pathname),
+        page_location: getPageViewEventLocation(action.payload.location),
       });
       return;
 
@@ -138,7 +130,7 @@ function logAction(action, prevState, state) {
 
       gtag('event', 'page_view', {
         ...params,
-        page_location: getPageViewEventLocation(window.location.pathname),
+        page_location: getPageViewEventLocation(window.location),
       });
       return;
 

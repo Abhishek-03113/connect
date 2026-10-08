@@ -1,71 +1,86 @@
 import { describe, expect, it } from 'vitest';
 
-import { getDongleID, getZoom, getRouteId, getRouteZoom, getPrimeNav, getStreamNav } from './url';
+import { parseUrl, urlFor } from './url';
 
 const DONGLE = '0000aaaa0000aaaa';
 const LOG = '2026-08-06--12-00-00';
 
-describe('URL pathname helpers', () => {
-  it.each([
-    [`/${DONGLE}`, DONGLE],
-    [`/${DONGLE}/${LOG}`, DONGLE],
-    ['/', null],
-    ['/prime', null],
-  ])('getDongleID(%s)', (pathname, expected) => {
-    expect(getDongleID(pathname)).toBe(expected);
-  });
+const home = { page: 'home', dongleId: null, logId: null, zoom: null, legacyRange: null };
+const device = { ...home, dongleId: DONGLE };
 
-  it('returns null if a pathname segment disappears while it is read', () => {
-    let reads = 0;
-    const parts = [];
-    Object.defineProperty(parts, 0, { get: () => ((reads += 1) === 1 ? DONGLE : '') });
-    const pathname = { split: () => ({ filter: () => parts }) };
-    expect(getDongleID(pathname)).toBeNull();
-  });
-
+describe('parseUrl', () => {
   it.each([
-    [`/${DONGLE}/10/20`, { start: 10, end: 20 }],
-    [`/${DONGLE}/0/20/ignored`, { start: 0, end: 20 }],
-    [`/${DONGLE}/${LOG}/10/20`, { start: Number(LOG), end: 10 }],
-    [`/${DONGLE}/10`, null],
-    ['/auth/code/provider', null],
-  ])('getZoom(%s)', (pathname, expected) => {
-    expect(getZoom(pathname)).toEqual(expected);
+    ['/', home],
+    ['/auth/code/provider', home],
+    ['/demo', home],
+    ['/referrals', { ...home, page: 'referrals' }],
+    ['/referrals/extra', home],
+    [`/${DONGLE}`, { ...device, page: 'dashboard' }],
+    [`/${DONGLE}/`, { ...device, page: 'dashboard' }],
+    [`/${DONGLE}/prime`, { ...device, page: 'prime' }],
+    [`/${DONGLE}/stream`, { ...device, page: 'stream' }],
+    [`/${DONGLE}/prime/extra`, { ...device, page: 'dashboard' }],
+    [`/${DONGLE}/unknown`, { ...device, page: 'dashboard' }],
+    [`/${DONGLE}/${LOG}`, { ...device, page: 'drive', logId: LOG }],
+    [`/${DONGLE}/${LOG}/556/610`, { ...device, page: 'drive', logId: LOG, zoom: { start: 556000, end: 610000 } }],
+    [`/${DONGLE}/${LOG}/0/20`, { ...device, page: 'drive', logId: LOG, zoom: { start: 0, end: 20000 } }],
+    [`/${DONGLE}/1000/2000`, { ...device, page: 'legacy', legacyRange: { start: 1000, end: 2000 } }],
+  ])('reads %s', (pathname, expected) => {
+    expect(parseUrl({ pathname })).toEqual(expected);
   });
 
   it.each([
-    [`/${DONGLE}/${LOG}`, LOG],
-    [`/${DONGLE}/${LOG}/10/20`, LOG],
-    [`/${DONGLE}/prime`, null],
-    [`/${DONGLE}`, null],
-  ])('getRouteId(%s)', (pathname, expected) => {
-    expect(getRouteId(pathname)).toEqual(expected);
+    ['reversed', '20/10'],
+    ['empty', '10/10'],
+    ['negative', '-10/20'],
+    ['fractional', '1.5/20'],
+    ['non-numeric', 'a/b'],
+    ['unsafe', `0/${'9'.repeat(20)}`],
+    ['incomplete', '10'],
+  ])('opens the whole drive for a %s range', (_name, range) => {
+    expect(parseUrl({ pathname: `/${DONGLE}/${LOG}/${range}` })).toEqual({ ...device, page: 'drive', logId: LOG });
   });
 
   it.each([
-    [`/${DONGLE}/${LOG}`, null],
-    [`/${DONGLE}/${LOG}/556/610`, { start: 556000, end: 610000 }],
-    [`/${DONGLE}/${LOG}/0/20`, { start: 0, end: 20000 }],
-    [`/${DONGLE}/10/20`, null],
-  ])('getRouteZoom(%s)', (pathname, expected) => {
-    expect(getRouteZoom(pathname)).toEqual(expected);
+    ['reversed', '2000/1000'],
+    ['unsafe', `0/${'9'.repeat(20)}`],
+    ['extra segment', '1000/2000/3000'],
+  ])('opens the dashboard for a %s legacy range', (_name, range) => {
+    expect(parseUrl({ pathname: `/${DONGLE}/${range}` })).toEqual({ ...device, page: 'dashboard' });
   });
 
   it.each([
-    [`/${DONGLE}/prime`, true],
-    [`/${DONGLE}/prime/extra`, false],
-    ['/not-a-device/prime', false],
-    [`/${DONGLE}/stream`, false],
-  ])('getPrimeNav(%s)', (pathname, expected) => {
-    expect(getPrimeNav(pathname)).toBe(expected);
+    ['too short', DONGLE.slice(1)],
+    ['too long', `${DONGLE}0`],
+    ['uppercase', DONGLE.toUpperCase()],
+  ])('ignores a %s dongle id', (_name, dongleId) => {
+    expect(parseUrl({ pathname: `/${dongleId}/${LOG}` })).toEqual(home);
+  });
+});
+
+describe('urlFor', () => {
+  it.each([
+    [{ page: 'home' }, '/'],
+    [{ page: 'referrals', dongleId: DONGLE }, '/referrals'],
+    [{ page: 'dashboard', dongleId: DONGLE }, `/${DONGLE}`],
+    [{ page: 'prime', dongleId: DONGLE, logId: LOG }, `/${DONGLE}/prime`],
+    [{ page: 'stream', dongleId: DONGLE }, `/${DONGLE}/stream`],
+    [{ dongleId: DONGLE, logId: LOG }, `/${DONGLE}/${LOG}`],
+    [{ dongleId: DONGLE, logId: LOG, zoom: { start: 1000, end: 2000 } }, `/${DONGLE}/${LOG}/1/2`],
+    [{ dongleId: DONGLE, logId: LOG, zoom: { start: 1500, end: 1700 } }, `/${DONGLE}/${LOG}/1/2`],
+  ])('writes %j', (location, expected) => {
+    expect(urlFor(location)).toBe(expected);
   });
 
   it.each([
-    [`/${DONGLE}/stream`, true],
-    [`/${DONGLE}/stream/extra`, false],
-    ['/not-a-device/stream', false],
-    [`/${DONGLE}/prime`, false],
-  ])('getStreamNav(%s)', (pathname, expected) => {
-    expect(getStreamNav(pathname)).toBe(expected);
+    '/',
+    '/referrals',
+    `/${DONGLE}`,
+    `/${DONGLE}/prime`,
+    `/${DONGLE}/stream`,
+    `/${DONGLE}/${LOG}`,
+    `/${DONGLE}/${LOG}/556/610`,
+  ])('writes back what it reads for %s', (pathname) => {
+    expect(urlFor(parseUrl({ pathname }))).toBe(pathname);
   });
 });
