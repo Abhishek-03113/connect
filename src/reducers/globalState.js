@@ -335,40 +335,28 @@ export default function reducer(_state, action) {
         subscription: null,
       };
       break;
-    case Types.TIMELINE_POP_SELECTION:
-      if (state.zoom.previous) {
-        state.zoom = state.zoom.previous;
-      } else {
-        state.zoom = null;
-        state.loop = null;
+    case Types.ACTION_SELECT_DRIVE: {
+      const driveChanged = action.logId !== state.selectedRouteId;
+      if (driveChanged || !state.currentRoute) {
+        state.selectedRouteId = action.logId;
+        state.currentRoute = state.routes?.find((route) => route.log_id === action.logId) || null;
       }
-      break;
-    case Types.TIMELINE_PUSH_SELECTION: {
-      if (!state.zoom || !action.start || !action.end || action.start < state.zoom.start || action.end > state.zoom.end) {
+      const { currentRoute } = state;
+      let zoom = null;
+      if (action.logId && action.zoom) {
+        // the URL rounds the range outwards to whole seconds
+        zoom = currentRoute ? { ...action.zoom, end: Math.min(action.zoom.end, currentRoute.duration) } : action.zoom;
+      } else if (currentRoute) {
+        zoom = { start: 0, end: currentRoute.duration };
+      }
+      if (!driveChanged && zoom?.start === state.zoom?.start && zoom?.end === state.zoom?.end) {
+        break; // keep the same object, so nothing re-renders or restarts
+      }
+      // files are kept while zooming in
+      if (driveChanged || !zoom || !state.zoom || zoom.start < state.zoom.start || zoom.end > state.zoom.end) {
         state.files = null;
       }
-
-      state.selectedRouteId = action.log_id;
-      state.currentRoute = state.routes?.find((route) => route.log_id === action.log_id) || null;
-      if (action.log_id) {
-        if (action.start != null && action.end != null) {
-          state.zoom = {
-            start: action.start,
-            end: action.end,
-            previous: state.zoom,
-          };
-        } else {
-          state.zoom = state.currentRoute ? {
-            start: 0,
-            end: state.currentRoute.duration,
-            previous: state.zoom,
-          } : null;
-          state.loop = null;
-        }
-      } else {
-        state.zoom = null;
-        state.loop = null;
-      }
+      state.zoom = zoom;
       break;
     }
     case Types.ACTION_FILES_URLS:

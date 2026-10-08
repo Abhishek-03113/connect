@@ -1,10 +1,9 @@
-import { parseUrl } from './url';
 import { getDefaultFilter } from './utils/filter';
 
-export function createInitialState(pathname = window.location.pathname) {
-  const { page, dongleId, logId, zoom } = parseUrl({ pathname });
+// the URL is applied on top of this by applyUrl(), see actions/history.js
+export function createInitialState() {
   return {
-    dongleId,
+    dongleId: null,
 
     desiredPlaySpeed: 1,    // speed set by user
     isBufferingVideo: true, // if we're currently buffering for more data
@@ -23,8 +22,8 @@ export function createInitialState(pathname = window.location.pathname) {
     profile: null,
     devices: null,
 
-    primeNav: page === 'prime',
-    streamNav: page === 'stream',
+    primeNav: false,
+    streamNav: false,
     subscription: null,
     subscribeInfo: null,
 
@@ -36,9 +35,9 @@ export function createInitialState(pathname = window.location.pathname) {
     },
 
     filter: getDefaultFilter(),
-    zoom,
+    zoom: null,
     loop: null,
-    selectedRouteId: logId,
+    selectedRouteId: null,
     limit: 0,
   };
 }
